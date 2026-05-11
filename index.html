@@ -536,6 +536,10 @@
           playReveal();
           if (navigator.vibrate) navigator.vibrate([80, 60, 80, 60, 200]);
           confetti();
+
+          // 👇 SCROLL AUTOMÁTICO
+          card.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
         }, 380);
       }
     }
