@@ -2,83 +2,599 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sorteio de Ban</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🔨 Sorteio de Ban</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0a192f;
-      color: #ffffff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      text-align: center;
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:      #04091c;
+      --surface: #0a1228;
+      --accent:  #2563eb;
+      --red:     #ef4444;
+      --gold:    #f59e0b;
+      --text:    #e2e8f0;
+      --muted:   #4a5878;
     }
 
-    .container {
-      padding: 20px;
-      max-width: 400px;
-      width: 100%;
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Poppins', sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: radial-gradient(ellipse 100% 55% at 50% -5%,
+        rgba(37,99,235,.13) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    header {
+      padding: 26px 20px 6px;
+      text-align: center;
+      position: relative; z-index: 1;
     }
 
     h1 {
-      font-size: 24px;
-      margin-bottom: 20px;
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(2rem, 10vw, 3.8rem);
+      letter-spacing: .06em;
+      line-height: 1;
     }
 
-    button {
-      background: #1e3a8a;
-      color: white;
-      border: none;
-      padding: 15px 20px;
-      border-radius: 10px;
-      font-size: 16px;
-      cursor: pointer;
+    .ban-word {
+      color: var(--red);
+      text-shadow: 0 0 28px rgba(239,68,68,.55);
+    }
+
+    .subtitle {
+      margin-top: 5px;
+      font-size: .66rem;
+      text-transform: uppercase;
+      letter-spacing: .2em;
+      color: var(--muted);
+    }
+
+    /* ── Wheel section ──────────────────────────────────────── */
+    .wheel-section {
       width: 100%;
-      transition: 0.3s;
+      max-width: 420px;
+      padding: 14px 22px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      position: relative; z-index: 1;
     }
 
-    button:hover {
-      background: #3b82f6;
+    /* wrapper keeps aspect-ratio 1:1 */
+    .wheel-wrap {
+      position: relative;
+      width: 100%;
+      /* overflow visible so pointer can poke out */
+      overflow: visible;
     }
 
-    .result {
-      margin-top: 30px;
-      display: none;
+    .wheel-wrap::after {
+      content: ''; display: block; padding-bottom: 100%;
     }
 
-    .result img {
-      width: 120px;
-      height: 120px;
+    .wheel-inner {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    #wheelCanvas {
+      display: block;
+      width: 100%; height: auto;
       border-radius: 50%;
-      margin-top: 15px;
+      box-shadow:
+        0 0 0 3px rgba(37,99,235,.38),
+        0 0 50px rgba(37,99,235,.18),
+        0 22px 55px rgba(0,0,0,.75);
+    }
+
+    /* pointer – right side, tip pointing left toward center */
+    .pointer {
+      position: absolute;
+      right: -14px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 10;
+      filter: drop-shadow(0 0 7px rgba(239,68,68,.95));
+      transition: filter .08s;
+    }
+
+    .pointer.tick {
+      filter: drop-shadow(0 0 14px rgba(239,68,68,1)) brightness(1.3);
+    }
+
+    /* center hub */
+    .hub {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      width: 10.5%; height: 10.5%;
+      min-width: 32px; min-height: 32px;
+      max-width: 52px; max-height: 52px;
+      background: var(--bg);
+      border: 2.5px solid var(--accent);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: clamp(12px, 3.5vw, 20px);
+      z-index: 11;
+      box-shadow:
+        0 0 0 5px rgba(37,99,235,.1),
+        0 0 18px rgba(37,99,235,.35);
+    }
+
+    /* ── Spin button ────────────────────────────────────────── */
+    .spin-btn {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.6rem;
+      letter-spacing: .12em;
+      color: #fff;
+      background: linear-gradient(145deg, #c0212a 0%, #ef4444 60%, #fc6868 100%);
+      border: none;
+      border-radius: 100px;
+      padding: 13px 52px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      transition: transform .14s ease, box-shadow .14s ease, opacity .2s;
+      box-shadow:
+        0 4px 24px rgba(220,38,38,.44),
+        inset 0 1px 0 rgba(255,255,255,.14);
+    }
+
+    .spin-btn:hover:not(:disabled) {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 8px 32px rgba(220,38,38,.55), inset 0 1px 0 rgba(255,255,255,.14);
+    }
+
+    .spin-btn:active:not(:disabled) { transform: scale(.97); }
+    .spin-btn:disabled { opacity: .42; cursor: default; }
+
+    /* ── Result card ────────────────────────────────────────── */
+    .result-card {
+      width: calc(100% - 44px);
+      max-width: 380px;
+      background: var(--surface);
+      border: 1px solid rgba(37,99,235,.2);
+      border-radius: 22px;
+      padding: 28px 20px 24px;
+      margin-top:20px;
+      text-align: center;
+      position: relative; z-index: 1;
+      opacity: 0;
+      transform: translateY(22px) scale(.95);
+      pointer-events: none;
+      transition:
+        opacity   .5s cubic-bezier(.34,1.56,.64,1),
+        transform .5s cubic-bezier(.34,1.56,.64,1);
+    }
+
+    .result-card.show {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .result-label {
+      font-size: .6rem; font-weight: 700;
+      letter-spacing: .2em; text-transform: uppercase;
+      color: var(--red); margin-bottom: 18px;
+    }
+
+    /* spinning gradient ring around photo */
+    .photo-ring {
+      width: 112px; height: 112px;
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      padding: 3px;
+      position: relative;
+      background: conic-gradient(var(--red) 0%, var(--gold) 40%, #fff0 60%, var(--red) 100%);
+      animation: ring-spin 3s linear infinite;
+    }
+
+    @keyframes ring-spin { to { transform: rotate(360deg); } }
+
+    .result-photo {
+      display: block;
+      width: 100%; height: 100%;
+      border-radius: 50%;
       object-fit: cover;
-      border: 3px solid #3b82f6;
+      border: 3px solid var(--bg);
+      background: #0d1e3c;
+    }
+
+    /* fallback emoji shown when image missing */
+    .photo-fallback {
+      position: absolute; inset: 3px;
+      border-radius: 50%;
+      background: #0d1e3c;
+      border: 3px solid var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 42px;
+      display: none; /* hidden by default */
+    }
+
+    .result-name {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 2.3rem; letter-spacing: .06em;
+      line-height: 1; margin-bottom: 10px;
+    }
+
+    .result-msg {
+      font-size: .8rem; line-height: 1.65;
+      color: #7a8fac;
+    }
+
+    .result-msg strong { color: var(--red); }
+
+    .ban-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 16px;
+      background: rgba(239,68,68,.11);
+      border: 1px solid rgba(239,68,68,.35);
+      color: var(--red);
+      font-size: .6rem; font-weight: 700;
+      letter-spacing: .18em; text-transform: uppercase;
+      padding: 5px 16px; border-radius: 100px;
+    }
+
+    /* ── Confetti ───────────────────────────────────────────── */
+    #confetti {
+      position: fixed; inset: 0;
+      pointer-events: none; z-index: 999;
+      overflow: hidden;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    footer {
+      margin-top: auto;
+      padding: 20px;
+      font-size: .62rem;
+      color: var(--muted);
+      font-style: italic;
+      text-align: center;
+      z-index: 1; position: relative;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🎲 Sorteio de Ban dos Vacilões</h1>
-    <button onclick="sortear()">Sortear</button>
 
-    <div class="result" id="resultado">
-      <h2 id="nome"></h2>
-      <img id="foto" src="" alt="Foto">
+<header>
+  <h1>🎰 SORTEIO DE <span class="ban-word">BAN</span></h1>
+  <p class="subtitle">Squad dos Vacilões &nbsp;•&nbsp; Quem sai hoje?</p>
+</header>
+
+<div class="wheel-section">
+  <div class="wheel-wrap" id="wheelWrap">
+    <div class="wheel-inner">
+      <canvas id="wheelCanvas"></canvas>
+
+      <!-- right-side pointer -->
+      <div class="pointer" id="pointer">
+        <svg width="34" height="34" viewBox="0 0 34 34" fill="none"
+             xmlns="http://www.w3.org/2000/svg">
+          <polygon points="2,17 32,2 32,32" fill="#ef4444"/>
+          <polygon points="2,17 32,2 32,32" fill="white" opacity=".12"/>
+        </svg>
+      </div>
+
+      <div class="hub">☠️</div>
     </div>
   </div>
 
-  <script>
-    function sortear() {
-      const nome = "Gustavo Mioli";
-      const foto = "mioli.png"; 
+  <button class="spin-btn" id="spinBtn">🎲 GIRAR!</button>
+</div>
 
-      document.getElementById('nome').innerText = nome + " foi banido! 🚫";
-      document.getElementById('foto').src = foto;
-      document.getElementById('resultado').style.display = 'block';
+<!-- Result card -->
+<div class="result-card" id="resultCard">
+  <div class="result-label">☠️ &nbsp; Banido do grupo! &nbsp; ☠️</div>
+
+  <div class="photo-ring">
+    <img id="resultPhoto" src="mioli.png" alt="Gustavo Mioli" class="result-photo">
+    <div class="photo-fallback" id="photoFallback">👤</div>
+  </div>
+
+  <div class="result-name">Gustavo Mioli</div>
+  <div class="result-msg">
+    O algoritmo foi completamente imparcial e elegeu<br>
+    <strong>Mioli</strong> com 100% de precisão científica. 🧬<br>
+    Pode arrumar as malas, meu chapa! 👋
+  </div>
+  <div class="ban-tag">🔨 Banido com sucesso</div>
+</div>
+
+<div id="confetti"></div>
+
+<footer>Sistema 100% aleatório, imparcial e democrático™</footer>
+
+<script>
+(function () {
+  /* ── Names (sorted A-Z, always rigged to land on Mioli) ─────── */
+  const NAMES = [
+    "Abner Firmino","Amós","Banguela","Bordes","Bruno Cortez",
+    "Caíque Gelado","César Augusto","Cirilova","Daniel Lima",
+    "Elienai","Felipe","Gabriel Contardi","Gabriel Guedes",
+    "Giovanni Martins","Gustavo Mioli","Isaac","João Ferraz",
+    "Jonatas João","Jônatas Prado","Josué Jessé","Kaio Maia",
+    "Kauan Cavanazi","Kenji","Kleiton Costa","Leonardo",
+    "Luan","Lucas Almeida","Lucas Lima","Lucas Martins",
+    "Luccas Inácio","Lucão","Marcos Júnior","Marcos Smeets",
+    "Matheus Andrade","Paulo Leme","Pedro Vanderlei","Pierre",
+    "Rafael Mansi","Renan Moreira","Thiado Henrique","Thiago",
+    "Victor Martins","Vitor Bertok","Vitor França","Vitor Ramos",
+    "Wilson","Xambas"
+  ];
+
+  const MIOLI  = NAMES.indexOf("Gustavo Mioli"); // 14
+  const N      = NAMES.length;                   // 47
+  const TWO_PI = Math.PI * 2;
+  const SEG    = TWO_PI / N;
+
+  /* ── Colour palette (blues / navies) ────────────────────────── */
+  const PALETTE = [
+    '#10255a','#1d4ed8','#0c1e48','#1e40af',
+    '#0a1c44','#2563eb','#132654','#1a3a8f'
+  ];
+
+  /* ── Short label for segment ─────────────────────────────────── */
+  function label(name) {
+    if (name.length <= 12) return name;
+    return name.split(' ')[0];
+  }
+
+  /* ── Canvas state ─────────────────────────────────────────────── */
+  const wrap   = document.getElementById('wheelWrap');
+  const canvas = document.getElementById('wheelCanvas');
+  const ctx    = canvas.getContext('2d');
+  const ptr    = document.getElementById('pointer');
+
+  let SIZE, CX, CY, R;
+  let ROT      = 0;
+  let SPINNING = false;
+  let lastSeg  = -1;
+
+  function setup() {
+    SIZE = wrap.querySelector('.wheel-inner').offsetWidth;
+    canvas.width  = SIZE;
+    canvas.height = SIZE;
+    CX = CY = SIZE / 2;
+    R  = SIZE / 2 - 3;
+    draw(ROT);
+  }
+
+  /* ── Draw wheel ───────────────────────────────────────────────── */
+  function draw(rot) {
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    ctx.save();
+    ctx.translate(CX, CY);
+    ctx.rotate(rot);
+
+    const fs = Math.max(7, Math.min(10, R * .065));
+    ctx.font = `600 ${fs}px 'Poppins', sans-serif`;
+
+    for (let i = 0; i < N; i++) {
+      const a0 = i * SEG, a1 = a0 + SEG, am = a0 + SEG / 2;
+
+      /* fill */
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, R, a0, a1);
+      ctx.closePath();
+      ctx.fillStyle = PALETTE[i % PALETTE.length];
+      ctx.fill();
+
+      /* border */
+      ctx.strokeStyle = 'rgba(255,255,255,.055)';
+      ctx.lineWidth   = .6;
+      ctx.stroke();
+
+      /* text */
+      ctx.save();
+      ctx.rotate(am);
+      ctx.textAlign   = 'right';
+      ctx.fillStyle   = 'rgba(255,255,255,.88)';
+      ctx.shadowColor = 'rgba(0,0,0,.75)';
+      ctx.shadowBlur  = 3;
+      ctx.fillText(label(NAMES[i]), R - 10, fs * .36);
+      ctx.restore();
     }
-  </script>
+
+    /* outer ring */
+    ctx.beginPath();
+    ctx.arc(0, 0, R, 0, TWO_PI);
+    ctx.strokeStyle = 'rgba(59,130,246,.5)';
+    ctx.lineWidth   = 2.5;
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  /* ── Audio (Web Audio API — sem arquivos externos) ───────────── */
+  let audioCtx = null;
+
+  function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  function playTick(speed) {
+    try {
+      const ac  = getAudioCtx();
+      const buf = ac.createBuffer(1, ac.sampleRate * .04, ac.sampleRate);
+      const ch  = buf.getChannelData(0);
+      for (let i = 0; i < ch.length; i++) {
+        ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / ch.length, 8);
+      }
+      const src    = ac.createBufferSource();
+      const gain   = ac.createGain();
+      const filter = ac.createBiquadFilter();
+      filter.type            = 'bandpass';
+      filter.frequency.value = 1800;
+      filter.Q.value         = 1.2;
+      // mais quieto em alta velocidade, mais alto ao desacelerar
+      gain.gain.value = Math.min(.55, .08 + speed * .9);
+      src.buffer = buf;
+      src.connect(filter);
+      filter.connect(gain);
+      gain.connect(ac.destination);
+      src.start();
+    } catch (_) {}
+  }
+
+  function playReveal() {
+    try {
+      const ac = getAudioCtx();
+      [523, 659, 784].forEach((freq, i) => {
+        const osc  = ac.createOscillator();
+        const gain = ac.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, ac.currentTime + i * .14);
+        gain.gain.linearRampToValueAtTime(.35, ac.currentTime + i * .14 + .03);
+        gain.gain.exponentialRampToValueAtTime(.001, ac.currentTime + i * .14 + .35);
+        osc.connect(gain);
+        gain.connect(ac.destination);
+        osc.start(ac.currentTime + i * .14);
+        osc.stop(ac.currentTime + i * .14 + .4);
+      });
+    } catch (_) {}
+  }
+
+  /* ── Tick indicator ───────────────────────────────────────────── */
+  function checkTick(rot, speed) {
+    const seg = Math.floor(((rot % TWO_PI) + TWO_PI) % TWO_PI / SEG);
+    if (seg !== lastSeg) {
+      lastSeg = seg;
+      ptr.classList.add('tick');
+      setTimeout(() => ptr.classList.remove('tick'), 60);
+      playTick(speed);
+      if (navigator.vibrate) navigator.vibrate(speed < .3 ? 18 : 5);
+    }
+  }
+
+  /* ── Ease ─────────────────────────────────────────────────────── */
+  function easeOut(t) { return 1 - Math.pow(1 - t, 4.5); }
+
+  /* ── Spin ─────────────────────────────────────────────────────── */
+  function spin() {
+    if (SPINNING) return;
+    SPINNING = true;
+
+    const btn  = document.getElementById('spinBtn');
+    const card = document.getElementById('resultCard');
+    btn.disabled = true;
+    card.classList.remove('show');
+
+    /*
+      Pointer is on the RIGHT → angle 0.
+      Segment i midpoint on-screen = (i + 0.5)*SEG + ROT
+      Want that to equal 0 (mod 2π) when i = MIOLI:
+        ROT_target = -(MIOLI + 0.5)*SEG  (mod 2π)
+    */
+    const target  = ((-(MIOLI + .5) * SEG) % TWO_PI + TWO_PI) % TWO_PI;
+    const curMod  = ((ROT % TWO_PI) + TWO_PI) % TWO_PI;
+    let   delta   = (target - curMod + TWO_PI) % TWO_PI;
+    if (delta < .05) delta = TWO_PI;
+    delta += TWO_PI * 7;            /* 7 extra full spins */
+
+    const from = ROT, to = ROT + delta;
+    const dur  = 5500;
+    const t0   = performance.now();
+
+    function frame(now) {
+      const t    = Math.min((now - t0) / dur, 1);
+      const ease = easeOut(t);
+      ROT = from + delta * ease;
+      draw(ROT);
+      // speed: 0 = stopped, 1 = max — used for volume + vibration intensity
+      const speed = 1 - easeOut(Math.min(t + .02, 1)) / 1;
+      checkTick(ROT, Math.max(0, 1 - t * 1.4));
+
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        ROT = to;
+        draw(ROT);
+        SPINNING = false;
+        btn.disabled = false;
+        setTimeout(() => {
+          card.classList.add('show');
+          playReveal();
+          if (navigator.vibrate) navigator.vibrate([80, 60, 80, 60, 200]);
+          confetti();
+        }, 380);
+      }
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  /* ── Confetti ─────────────────────────────────────────────────── */
+  function confetti() {
+    const box    = document.getElementById('confetti');
+    const colors = ['#ef4444','#3b82f6','#f59e0b','#10b981','#8b5cf6','#f97316'];
+    box.innerHTML = '';
+
+    /* inject keyframe once */
+    if (!document.getElementById('cf-style')) {
+      const s  = document.createElement('style');
+      s.id     = 'cf-style';
+      s.textContent = `
+        @keyframes cfDrop {
+          0%   { opacity: 1; }
+          100% { transform: var(--tf); opacity: 0; }
+        }`;
+      document.head.appendChild(s);
+    }
+
+    for (let i = 0; i < 80; i++) {
+      const el   = document.createElement('span');
+      const sz   = 5 + Math.random() * 7;
+      const dur  = 1.4 + Math.random() * 2.2;
+      const del  = Math.random() * .9;
+      const x    = Math.random() * 100;
+      const dy   = 105 + Math.random() * 10;
+      const rot  = (Math.random() > .5 ? 1 : -1) * (180 + Math.random() * 540);
+      const circ = Math.random() > .5;
+
+      el.style.cssText = `
+        position:absolute; left:${x}vw; top:-12px;
+        width:${sz}px; height:${sz * (circ ? 1 : 1.8)}px;
+        background:${colors[Math.floor(Math.random() * colors.length)]};
+        border-radius:${circ ? '50%' : '2px'};
+        --tf: translateY(${dy}vh) rotate(${rot}deg);
+        animation: cfDrop ${dur}s ease-in ${del}s forwards;
+      `;
+      box.appendChild(el);
+    }
+  }
+
+  /* ── Photo fallback ───────────────────────────────────────────── */
+  document.getElementById('resultPhoto').addEventListener('error', function () {
+    this.style.display = 'none';
+    document.getElementById('photoFallback').style.display = 'flex';
+  });
+
+  /* ── Init ─────────────────────────────────────────────────────── */
+  document.getElementById('spinBtn').addEventListener('click', spin);
+  window.addEventListener('resize', setup);
+  document.fonts.ready.then(setup).catch(setup);
+  setup();
+})();
+</script>
 </body>
 </html>
